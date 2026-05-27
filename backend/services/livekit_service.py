@@ -14,7 +14,11 @@ class LiveKitService:
         self.url = settings.LIVEKIT_URL
         
         # Initialize LiveKit API client
-        self.room_client = api.RoomServiceClient(self.url, self.api_key, self.api_secret)
+        self.livekit_api = api.LiveKitAPI(
+            url=self.url,
+            api_key=self.api_key,
+            api_secret=self.api_secret
+        )
     
     def generate_token(
         self,
@@ -77,7 +81,7 @@ class LiveKitService:
             )
             raise
     
-    async def create_room(self, room_name: str) -> api.Room:
+    async def create_room(self, room_name: str):
         """
         Create a new LiveKit room.
         
@@ -88,7 +92,7 @@ class LiveKitService:
             Room object
         """
         try:
-            room = self.room_client.create_room(
+            room = await self.livekit_api.room.create_room(
                 api.CreateRoomRequest(name=room_name)
             )
             
@@ -105,7 +109,7 @@ class LiveKitService:
             
             # Try to list rooms to see if it exists
             try:
-                rooms = self.room_client.list_rooms(api.ListRoomsRequest())
+                rooms = await self.livekit_api.room.list_rooms(api.ListRoomsRequest())
                 for room in rooms.rooms:
                     if room.name == room_name:
                         logger.info("room_exists", room_name=room_name)
@@ -123,7 +127,7 @@ class LiveKitService:
             room_name: Name of the room to delete
         """
         try:
-            self.room_client.delete_room(
+            await self.livekit_api.room.delete_room(
                 api.DeleteRoomRequest(room=room_name)
             )
             
@@ -148,7 +152,7 @@ class LiveKitService:
             List of participant objects
         """
         try:
-            response = self.room_client.list_participants(
+            response = await self.livekit_api.room.list_participants(
                 api.ListParticipantsRequest(room=room_name)
             )
             
@@ -185,7 +189,7 @@ class LiveKitService:
             muted: Whether to mute or unmute
         """
         try:
-            self.room_client.mute_published_track(
+            await self.livekit_api.room.mute_published_track(
                 api.MuteRoomTrackRequest(
                     room=room_name,
                     identity=participant_identity,
@@ -212,7 +216,7 @@ class LiveKitService:
     async def test_connection(self) -> bool:
         """Test the connection to LiveKit server."""
         try:
-            rooms = self.room_client.list_rooms(api.ListRoomsRequest())
+            rooms = await self.livekit_api.room.list_rooms(api.ListRoomsRequest())
             logger.info("livekit_connection_test_successful", room_count=len(rooms.rooms))
             return True
         except Exception as e:

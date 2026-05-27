@@ -11,7 +11,7 @@ services:
       # Commented out UDP range to avoid port conflicts
       # - "5000-6000:5000-6000/udp"  # RTC UDP
     environment:
-      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
     volumes:
       - ./livekit-config.yaml:/etc/livekit/config.yaml:ro
     command: --config /etc/livekit/config.yaml --node-ip 127.0.0.1

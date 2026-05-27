@@ -1,4 +1,5 @@
 import structlog
+import logging
 from backend.config import settings
 
 
@@ -7,6 +8,9 @@ def setup_logging():
     
     log_level = getattr(settings, 'LOG_LEVEL', 'INFO')
     environment = getattr(settings, 'ENVIRONMENT', 'development')
+    
+    # Convert string log level to numeric value
+    numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     
     # Configure structlog
     structlog.configure(
@@ -19,7 +23,7 @@ def setup_logging():
             structlog.dev.ConsoleRenderer() if environment == "development" 
             else structlog.processors.JSONRenderer()
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(log_level),
+        wrapper_class=structlog.make_filtering_bound_logger(numeric_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
