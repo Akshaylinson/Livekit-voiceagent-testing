@@ -7,10 +7,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy package files
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/package.json ./
 
-# Install dependencies
-RUN npm ci
+# Install all dependencies (including devDependencies for build)
+RUN npm install --include=dev
 
 # Copy frontend code
 COPY frontend/ ./

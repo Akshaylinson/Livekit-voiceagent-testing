@@ -80,8 +80,7 @@ services:
     ports:
       - "3001:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     restart: unless-stopped
     networks:
       - voice-agent-network
