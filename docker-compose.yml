@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # LiveKit Server
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: voice-agent-livekit
+    ports:
+      - "7880:7880"    # WebSocket
+      - "7881:7881"    # RTC TCP
+      # Commented out UDP range to avoid port conflicts
+      # - "5000-6000:5000-6000/udp"  # RTC UDP
+    environment:
+      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}
+    volumes:
+      - ./livekit-config.yaml:/etc/livekit/config.yaml:ro
+    command: --config /etc/livekit/config.yaml --node-ip 127.0.0.1
+    restart: unless-stopped
+    networks:
+      - voice-agent-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7880"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis (for LiveKit)
+  redis:
+    image: redis:7-alpine
+    container_name: voice-agent-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - voice-agent-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: voice-agent-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - LIVEKIT_URL=ws://livekit:7880
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+    depends_on:
+      livekit:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - voice-agent-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: voice-agent-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - voice-agent-network
+
+networks:
+  voice-agent-network:
+    driver: bridge
+
+volumes:
+  redis-data:
